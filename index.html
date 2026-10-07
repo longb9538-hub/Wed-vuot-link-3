@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTAP KEY SYSTEM - VƯỢT LINK 2 BƯỚC</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { background-color: #0b0f17; color: #e2e8f0; font-family: sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass max-w-md w-full p-6 rounded-2xl shadow-2xl text-center relative overflow-hidden">
+        <h1 class="text-2xl font-bold text-cyan-400 mb-2 flex items-center justify-center gap-2">
+            <i data-lucide="shield-check"></i> FTAP KEY SYSTEM
+        </h1>
+        <p class="text-xs text-gray-400 mb-6">Xác minh 2 bước để nhận mã kích hoạt Roblox</p>
+
+        <!-- Trạng thái HWID -->
+        <div class="bg-gray-900/80 p-3 rounded-lg mb-6 border border-gray-800 text-left">
+            <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Mã thiết bị (HWID):</div>
+            <div id="hwidDisplay" class="font-mono text-xs text-cyan-300 break-all">Đang đọc dữ liệu...</div>
+        </div>
+
+        <!-- BƯỚC 1 -->
+        <div id="step1" class="space-y-4">
+            <div class="p-4 bg-cyan-950/30 border border-cyan-800/50 rounded-xl">
+                <div class="text-sm font-semibold text-cyan-300 mb-1">BƯỚC 1 / 2: Khởi tạo phiên</div>
+                <p class="text-xs text-gray-400">Bấm nút bên dưới và chờ 15 giây để mở khóa Bước 2.</p>
+            </div>
+            <button id="btnStep1" onclick="startStep1()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-xl shadow-lg transition duration-200">
+                BẮT ĐẦU BƯỚC 1
+            </button>
+        </div>
+
+        <!-- BƯỚC 2 -->
+        <div id="step2" class="space-y-4 hidden">
+            <div class="p-4 bg-purple-950/30 border border-purple-800/50 rounded-xl">
+                <div class="text-sm font-semibold text-purple-300 mb-1">BƯỚC 2 / 2: Xác thực hệ thống</div>
+                <p class="text-xs text-gray-400">Vui lòng chờ đếm ngược kết thúc để lấy Key.</p>
+            </div>
+            <div id="timerDisplay" class="text-3xl font-extrabold text-purple-400 font-mono py-2">15s</div>
+            <button id="btnStep2" onclick="finishStep2()" disabled class="w-full py-3 bg-gray-700 text-gray-400 font-bold rounded-xl transition duration-200 cursor-not-allowed">
+                CHỜ ĐẾM NGƯỢC...
+            </button>
+        </div>
+
+        <!-- BƯỚC CUỐI: HIỂN THỊ KEY -->
+        <div id="stepKey" class="space-y-4 hidden">
+            <div class="p-4 bg-emerald-950/30 border border-emerald-800/50 rounded-xl">
+                <div class="text-sm font-semibold text-emerald-300 mb-1">XÁC MINH THÀNH CÔNG!</div>
+                <p class="text-xs text-gray-400">Copy mã bên dưới và dán vào Roblox GUI.</p>
+            </div>
+            <div class="flex gap-2">
+                <input id="keyOutput" type="text" readonly class="w-full bg-gray-900 border border-emerald-500/50 text-emerald-400 font-mono font-bold text-center py-3 rounded-xl">
+                <button onclick="copyKey()" class="px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition">
+                    <i data-lucide="copy"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="text-red-400 text-xs mt-4 hidden"></div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Thay URL nay bang URL Backend Vercel cua ban
+        const BACKEND_URL = "https://your-vercel-api.vercel.app";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const hwid = urlParams.get('hwid');
+
+        if (hwid) {
+            document.getElementById('hwidDisplay').innerText = hwid;
+        } else {
+            document.getElementById('hwidDisplay').innerText = "KHÔNG TÌM THẤY HWID! Vui lòng chạy từ Roblox GUI.";
+            document.getElementById('btnStep1').disabled = true;
+        }
+
+        async function startStep1() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/start-session?hwid=${encodeURIComponent(hwid)}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('step1').classList.add('hidden');
+                    document.getElementById('step2').classList.remove('hidden');
+                    runTimer(15);
+                } else {
+                    showError(data.error);
+                }
+            } catch (err) {
+                showError("Không thể kết nối đến máy chủ Backend!");
+            }
+        }
+
+        function runTimer(seconds) {
+            let left = seconds;
+            const timerEl = document.getElementById('timerDisplay');
+            const btn = document.getElementById('btnStep2');
+
+            const interval = setInterval(() => {
+                left--;
+                timerEl.innerText = `${left}s`;
+                if (left <= 0) {
+                    clearInterval(interval);
+                    timerEl.innerText = "HOÀN THÀNH!";
+                    btn.disabled = false;
+                    btn.innerText = "LẤY KEY NGAY";
+                    btn.className = "w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow-lg transition duration-200 cursor-pointer";
+                }
+            }, 1000);
+        }
+
+        async function finishStep2() {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/get-key?hwid=${encodeURIComponent(hwid)}`);
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('step2').classList.add('hidden');
+                    document.getElementById('stepKey').classList.remove('hidden');
+                    document.getElementById('keyOutput').value = data.key;
+                } else {
+                    showError(data.error);
+                }
+            } catch (err) {
+                showError("Lỗi xác minh Key từ Backend!");
+            }
+        }
+
+        function copyKey() {
+            const input = document.getElementById('keyOutput');
+            input.select();
+            navigator.clipboard.writeText(input.value);
+            alert("Đã sao chép Key vào khay nhớ tạm!");
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMessage');
+            el.innerText = msg;
+            el.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
